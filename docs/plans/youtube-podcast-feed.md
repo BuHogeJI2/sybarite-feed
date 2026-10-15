@@ -13,7 +13,9 @@ Genadi Valdberg's YouTube channel (`@GenadiValdberg`, `UC4pFACFhLkbr4rbZVbm5jag`
 ## Decisions & rationale
 | Decision | Why | Rejected |
 |---|---|---|
-| A scheduled GitHub Actions job, once a day, **plus a manual run from a laptop** with the same command | No server; the laptop is the fallback if YouTube blocks GitHub runners or the job breaks | feed-master on a VPS |
+| A scheduled GitHub Actions job, once a day, **plus a manual run from a laptop** with the same command | No server; the laptop is the fallback if the job breaks, the cookies expire, or YouTube blocks runners again | feed-master on a VPS |
+| **YouTube login cookies** of a separate Google account, stored as the repo secret `YT_COOKIES` | Phase 1: anonymous downloads from runners fail with `LOGIN_REQUIRED` ("Sign in to confirm you're not a bot"), with and without a PO token; with cookies they succeed. feed-master uses cookies in production too. A separate account keeps the ban and leak risk away from a personal account | PO-token provider (tested: blocked; not needed together with cookies); laptop as the main runner (needs the Mac to be on); residential proxy (paid, gray area); self-hosted runner (unsafe on a public repo) |
+| ffmpeg installed wherever yt-dlp runs | Without it yt-dlp writes a DASH m4a ("Only some players support this container"). With it yt-dlp repackages the file into a normal m4a, without re-encoding, which some podcast players need for correct seeking and duration | Shipping the DASH m4a |
 | **Public** GitHub repo (earlier draft: private) | The audience is public, so nothing needs hiding. Unlimited free minutes. Secrets stay in GitHub Secrets and are hidden in logs | Private: its only advantage was keeping the project hard to find |
 | A daily keepalive call in the workflow | GitHub disables scheduled workflows in a public repo after 60 days with no repo activity. The job doesn't commit, so it would stop quietly | Bot commits every month: they add noise to the history |
 | Cloudflare R2 for the audio files, `feed.xml`, `state.json`, `cover.jpg` | Downloads are free, which matters with many listeners; 10 GB free; S3-compatible | GitHub Releases (using GitHub as a media CDN is against its intended use), GitHub Pages (1 GB per site, 100 MB per file) |
@@ -28,35 +30,36 @@ Genadi Valdberg's YouTube channel (`@GenadiValdberg`, `UC4pFACFhLkbr4rbZVbm5jag`
 | Python 3.12 + `uv` + yt-dlp used as a library | yt-dlp is Python | Go |
 
 ## Assumptions
-- **Audio format:** YouTube's original m4a, format `140` (~129 kbps, ~27 GB in total, ~$0.26 per month), no re-encoding. Set in config; format `139` (~49 kbps, ~10 GB, fits the free tier) is the alternative.
+- **Audio format:** YouTube's original m4a, format `140` (~129 kbps, ~27 GB in total, ~$0.26 per month), repackaged by ffmpeg but not re-encoded. Set in config; format `139` (~49 kbps, ~10 GB, fits the free tier) is the alternative.
 - **Short videos:** videos under 2 minutes are skipped (`min_duration` in config).
 - **Failed videos** (removed, members-only): marked as failed in `state.json` and skipped after 3 attempts.
-- **The laptop** needs `brew install uv deno` once (the system Python is 3.9, and current yt-dlp needs 3.10+). A home IP probably needs no PO-token provider.
+- **The laptop** needs `brew install uv deno ffmpeg` once (the system Python is 3.9, and current yt-dlp needs 3.10+). A home IP needs no cookies (downloads from the Mac worked without them), so `YT_COOKIES_FILE` is optional there.
+- **Cookies last weeks to months.** When they expire, the daily job fails and GitHub emails the repo owner. Renewing them takes about 5 minutes: in a private window, log in with the separate account, open `youtube.com/robots.txt`, export the cookies with "Get cookies.txt LOCALLY", close the window without logging out, then run `gh secret set YT_COOKIES < cookies.txt` and delete the file.
 - **R2 supports `If-Match` on PutObject.** Phase 4 checks this; if it doesn't, a lock object in the bucket is used instead.
 - **The keepalive works:** calling the "enable workflow" API resets the 60-day counter. This is the method of `gautamkrishnar/keepalive-workflow`. GitHub also emails a warning before it disables a workflow.
 
 ## Phases
 
-### Phase 1 — Public repo skeleton + GitHub Actions download test
+### Phase 1 — Public repo skeleton + GitHub Actions download test (done)
 - **Goal:** find out whether YouTube allows downloads from GitHub runners, and what setup they need.
-- **Changes:** `git init`; a public GitHub repo; `.gitignore` (includes `.env`, `tmp/`); `.github/workflows/smoke.yml` (manual run only) that installs `yt-dlp` and `deno` and tries video `2NgIPVQbK8g` in three ways:
-  1. variant A: plain `-f "bestaudio[ext=m4a][language=ru]"`;
-  2. variant B: plus the `brainicism/bgutil-ytdlp-pot-provider` service container and the `bgutil-ytdlp-pot-provider` plugin;
-  3. each variant prints the file size, the audio track language and the download time.
-- **Verification:** run the workflow by hand from the GitHub UI and read the logs.
-- **Done when:** one variant downloads the Russian track. If none does, try cookies from a throwaway account. If that fails too, the daily job runs on the laptop (launchd), which changes Phase 5 only.
-- **Commit:** `ci: add YouTube download smoke test`
+- **Changes:** `git init`; the public repo `BuHogeJI2/sybarite-feed` (branch `master`); `.gitignore` (includes `.env`, `tmp/`); `.github/workflows/smoke.yml` (manual run only) that installs `yt-dlp` and `deno` and downloads video `2NgIPVQbK8g` with `-f "bestaudio[ext=m4a][language=ru]"`.
+- **Result:**
+  - Listing the channel works from runners (1054 videos), with no extra setup.
+  - Plain and PO-token downloads both fail with `LOGIN_REQUIRED` (run 38590073026).
+  - With cookies (`YT_COOKIES` secret), the download works both with and without the PO-token provider: format `140-1`, `language=ru`, the title "Трусость или мудрость? №184", 27.4 MB in about 5 seconds (run 38709646013).
+  - yt-dlp warned that it wrote a DASH m4a because ffmpeg is missing on the runner.
+- **Commits:** `ci: add YouTube download smoke test`, `ci: test YouTube download with cookies`
 
 ### Phase 2 — Channel listing, metadata and download
 - **Goal:** pick the next videos to process and download one with the original metadata.
 - **Changes:**
-  - `pyproject.toml` (yt-dlp, pytest) and `config.toml` (channel, format, `min_duration`, batch size, feed metadata, `base_url`);
+  - `pyproject.toml` (`yt-dlp[default]`, which includes the JavaScript challenge solver, and pytest) and `config.toml` (channel, format, `min_duration`, batch size, feed metadata, `base_url`);
   - `sybarite_feed/channel.py`: flat listing of `https://www.youtube.com/@GenadiValdberg/videos`;
   - `sybarite_feed/select.py`: a pure function that picks the next batch (newest first; skips done items, short videos, items failed 3 times);
   - `sybarite_feed/metadata.py`: the oEmbed title;
-  - `sybarite_feed/download.py`: downloads the Russian audio track and returns an `Episode` (id, original title, description with `lang=ru`, upload date, duration, size, mime type, video URL);
+  - `sybarite_feed/download.py`: downloads the Russian audio track (with the cookie file from `YT_COOKIES_FILE` when it is set; ffmpeg repackages the DASH m4a) and returns an `Episode` (id, original title, description with `lang=ru`, upload date, duration, size, mime type, video URL);
   - `tests/test_select.py`, and `tests/test_metadata.py` with a recorded oEmbed response.
-- **Verification:** `uv run pytest`; `uv run python -m sybarite_feed download --id 2NgIPVQbK8g --out ./tmp` gives Russian audio and the title "Трусость или мудрость? №184".
+- **Verification:** `uv run pytest`; `uv run python -m sybarite_feed download --id 2NgIPVQbK8g --out ./tmp` gives Russian audio and the title "Трусость или мудрость? №184", and the log has no "writing DASH m4a" warning.
 - **Done when:** the tests pass and the file is correct.
 - **Commit:** `feat: list channel videos and download audio`
 
@@ -79,7 +82,7 @@ Genadi Valdberg's YouTube channel (`@GenadiValdberg`, `UC4pFACFhLkbr4rbZVbm5jag`
 - **Changes:**
   - `sybarite_feed/storage.py`: `LocalStorage` (for tests) and `R2Storage` (boto3 with the R2 endpoint), with `put_state(if_match=etag)`;
   - `sybarite_feed/run.py`: load the state and its ETag, select a batch, then for each video upload `audio/<id>.m4a` → save the state with a conditional write → rebuild `feed.xml`. Audio goes up before the state, and the state before the feed, so the feed never points to a missing file. The state is saved after every episode, so a run that times out loses nothing. A conflict stops the run;
-  - `.env.example` (committed) listing `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`. The real `.env` is gitignored;
+  - `.env.example` (committed) listing `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and the optional `YT_COOKIES_FILE`. The real `.env` is gitignored;
   - `README.md` section "Run from laptop": `uv run --env-file .env python -m sybarite_feed run --limit N`;
   - `tests/test_run.py` covering order of writes, resume after a failure, and a state conflict.
 - **Verification:**
@@ -94,13 +97,13 @@ Genadi Valdberg's YouTube channel (`@GenadiValdberg`, `UC4pFACFhLkbr4rbZVbm5jag`
 - **Changes:** `.github/workflows/daily.yml` with:
   - `schedule` (once a day) plus `workflow_dispatch` with a `limit` input;
   - `concurrency: { group: feed, cancel-in-progress: false }`;
-  - the download setup that worked in Phase 1;
+  - the setup proven in Phase 1: Python, `deno`, ffmpeg (`apt-get install ffmpeg`), and the `YT_COOKIES` secret written to `$RUNNER_TEMP/cookies.txt` and passed as `YT_COOKIES_FILE`; no PO-token provider;
   - R2 secrets from GitHub Secrets;
   - `timeout-minutes` below the 6-hour limit;
   - a keepalive step (`permissions: actions: write`; calls the enable-workflow API);
   - only `schedule` and `workflow_dispatch` triggers. No `pull_request_target`, so forks never get the secrets.
 
-  Delete `smoke.yml`.
+  Delete `smoke.yml`. Add a `README.md` section "Refresh cookies" with the renewal steps from Assumptions.
 - **Verification:** one manual run with `limit=5`; `state.json` and `feed.xml` in R2 are updated and the new episodes show up in the app.
 - **Done when:** a scheduled run has worked unattended, and the backfill is in progress at 50 videos per day.
 - **Commit:** `ci: add daily feed update workflow`
@@ -116,7 +119,7 @@ Genadi Valdberg's YouTube channel (`@GenadiValdberg`, `UC4pFACFhLkbr4rbZVbm5jag`
 ## Phase dependencies
 | Phase | Depends on | Blocks | Parallel with | Nature of the dependency |
 |---|---|---|---|---|
-| 1 | — | 5 | 2, 3 | `daily.yml` reuses the setup that worked here |
+| 1 (done) | — | 5 | 2, 3 | `daily.yml` reuses the cookie setup proven here |
 | 2 | — | 4 | 1, 3 | `run.py` calls the listing, metadata and download code |
 | 3 | — | 4 | 1, 2 | `run.py` calls `rss.py`; `State` is defined here |
 | 4 | 2, 3 | 5, 6 | — | The workflow and the launch need the `run` command and the R2 bucket |
@@ -126,8 +129,8 @@ Genadi Valdberg's YouTube channel (`@GenadiValdberg`, `UC4pFACFhLkbr4rbZVbm5jag`
 ## Open questions
 | Question | What's unclear | Why it matters | Needed by |
 |---|---|---|---|
-| Which download setup works on GitHub runners? | Plain, PO token, cookies, or none | If none works, the daily job runs on the laptop (launchd) | Phase 5 |
-| How long does one video take on a runner? | Download speed and YouTube throttling | Sets the batch size and `timeout-minutes` | Phase 5 |
+| How long do the cookies last? | Only time will tell | Sets how often they must be renewed; if it is too often, the laptop becomes the main runner | Ongoing after Phase 5 |
+| Does 50 downloads a day get the account limited? | One test download says nothing about volume | If it does, lower the batch size or download the archive from the laptop | First week of Phase 5 |
 | Which domain? | Needs to be chosen and paid for (~$10/year) | The feed URL is permanent once people subscribe | Phase 6 |
 | Cover image | The channel avatar may be smaller than 1400 px | Apple and Spotify reject smaller covers | Phase 6 |
 | Owner email for `itunes:owner` | The project owner's or the author's | Directories send verification mail there; matters when submitting after the author agrees | Phase 6 |
