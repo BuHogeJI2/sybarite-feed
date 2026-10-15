@@ -9,6 +9,7 @@ from sybarite_feed.episode import Episode
 
 ITUNES = "http://www.itunes.com/dtds/podcast-1.0.dtd"
 ATOM = "http://www.w3.org/2005/Atom"
+COVER_KEY = "cover.jpg"
 
 ET.register_namespace("itunes", ITUNES)
 ET.register_namespace("atom", ATOM)
@@ -16,7 +17,7 @@ ET.register_namespace("atom", ATOM)
 
 def build_feed(episodes: Iterable[Episode], feed: FeedConfig, base_url: str) -> bytes:
     base_url = base_url.rstrip("/")
-    cover_url = f"{base_url}/cover.jpg"
+    cover_url = f"{base_url}/{COVER_KEY}"
 
     rss = ET.Element("rss", version="2.0")
     channel = _sub(rss, "channel")

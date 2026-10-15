@@ -6,6 +6,7 @@ import pytest
 from factories import make_config, make_episode
 from sybarite_feed.channel import ChannelVideo
 from sybarite_feed.download import DownloadedAudio
+from sybarite_feed.rss import COVER_KEY
 from sybarite_feed.run import FEED_KEY, MAX_CONSECUTIVE_FAILURES, STATE_KEY, run_update
 from sybarite_feed.select import MAX_ATTEMPTS
 from sybarite_feed.state import State, state_from_json, state_to_json
@@ -53,12 +54,20 @@ def work_dir(tmp_path):
     return path
 
 
+@pytest.fixture(autouse=True)
+def cover(tmp_path):
+    path = tmp_path / "cover.jpg"
+    path.write_bytes(b"jpeg")
+    return path
+
+
 def channel(*video_ids: str):
     return lambda url: [ChannelVideo(id=video_id, duration=1800) for video_id in video_ids]
 
 
 def run(storage, downloader, *video_ids, limit=10):
-    return run_update(storage, make_config(), limit, channel(*video_ids), downloader, pause=lambda: None)
+    cover = storage.root.parent / "cover.jpg"
+    return run_update(storage, make_config(cover=str(cover)), limit, channel(*video_ids), downloader, pause=lambda: None)
 
 
 def saved_state(storage) -> State:
@@ -77,12 +86,13 @@ def test_adds_new_videos_and_publishes_feed(storage, work_dir):
     assert set(saved_state(storage).episodes) == {"a", "b"}
     assert feed_guids(storage) == ["a", "b"]
     assert storage.get("audio/a.m4a").data == b"audio"
+    assert storage.get(COVER_KEY).data == b"jpeg"
     assert list(work_dir.iterdir()) == []
 
 
-def test_writes_audio_then_state_then_feed(storage, work_dir):
+def test_writes_cover_then_audio_state_and_feed(storage, work_dir):
     run(storage, FakeDownloader(work_dir), "a", "b")
-    assert storage.writes == ["audio/a.m4a", STATE_KEY, FEED_KEY, "audio/b.m4a", STATE_KEY, FEED_KEY]
+    assert storage.writes == [COVER_KEY, "audio/a.m4a", STATE_KEY, FEED_KEY, "audio/b.m4a", STATE_KEY, FEED_KEY]
 
 
 def test_second_run_skips_done_videos(storage, work_dir):
@@ -104,7 +114,7 @@ def test_limit_zero_only_republishes_feed(storage, work_dir):
     result = run(storage, FakeDownloader(work_dir), "a", "b", limit=0)
 
     assert result.ok and result.added == []
-    assert storage.writes == [FEED_KEY]
+    assert storage.writes == [COVER_KEY, FEED_KEY]
     assert storage.get(STATE_KEY) == state_before
 
 

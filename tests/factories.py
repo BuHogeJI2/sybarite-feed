@@ -32,7 +32,7 @@ def make_feed_config(**overrides) -> FeedConfig:
     return FeedConfig(**{**fields, **overrides})
 
 
-def make_config(**channel_overrides) -> Config:
+def make_config(cover: str = "cover.jpg", **channel_overrides) -> Config:
     channel = {
         "url": "https://www.youtube.com/@GenadiValdberg/videos",
         "audio_format": "bestaudio[ext=m4a]",
@@ -41,6 +41,6 @@ def make_config(**channel_overrides) -> Config:
     }
     return Config(
         channel=ChannelConfig(**{**channel, **channel_overrides}),
-        feed=make_feed_config(),
+        feed=make_feed_config(cover=cover),
         storage=StorageConfig(base_url="https://feed.example.com"),
     )

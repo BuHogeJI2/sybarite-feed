@@ -16,6 +16,8 @@ link = "https://www.youtube.com/@GenadiValdberg"
 language = "ru"
 category = "Society & Culture"
 subcategory = "Philosophy"
+# square, 1400-3000 px; the channel avatar
+cover = "cover.jpg"
 # itunes:owner is needed only when submitting to Apple/Spotify; left empty until the author agrees
 owner_name = ""
 owner_email = ""

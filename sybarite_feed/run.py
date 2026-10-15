@@ -3,11 +3,12 @@ import random
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from sybarite_feed.channel import ChannelVideo
 from sybarite_feed.config import Config
 from sybarite_feed.download import DownloadedAudio
-from sybarite_feed.rss import build_feed
+from sybarite_feed.rss import COVER_KEY, build_feed
 from sybarite_feed.select import select_batch
 from sybarite_feed.state import State, state_from_json, state_to_json
 from sybarite_feed.storage import Storage
@@ -41,6 +42,7 @@ def run_update(
     stored = storage.get(STATE_KEY)
     state = state_from_json(stored.data.decode()) if stored else State()
     etag = stored.etag if stored else None
+    storage.upload_file(COVER_KEY, Path(config.feed.cover), "image/jpeg", cache_control="public, max-age=86400")
 
     videos = list_videos(config.channel.url)
     batch = select_batch(videos, state.episodes.keys(), state.failures, config.channel.min_duration, limit)

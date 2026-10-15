@@ -19,6 +19,7 @@ class FeedConfig:
     link: str
     language: str
     category: str
+    cover: str = "cover.jpg"
     subcategory: str = ""
     owner_name: str = ""
     owner_email: str = ""
