@@ -9,5 +9,5 @@ dependencies = ["yt-dlp[default]"]
 dev = ["pytest"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".", "tests"]
 testpaths = ["tests"]

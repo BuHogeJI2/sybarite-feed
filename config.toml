@@ -5,3 +5,17 @@ url = "https://www.youtube.com/@GenadiValdberg/videos"
 audio_format = "bestaudio[ext=m4a][language=ru]/bestaudio[ext=m4a]"
 min_duration = 120
 batch_size = 50
+
+[feed]
+title = "Записки воинствующего сибарита"
+author = "Геннадий Вальдберг"
+description = """
+Кто такой сибарит? Богатый бездельник?.. Ан нет, это человек мыслящий, который предпочел материальным ценностям духовные. \
+Лекции Геннадия Вальдберга с YouTube-канала «Записки воинствующего сибарита»."""
+link = "https://www.youtube.com/@GenadiValdberg"
+language = "ru"
+category = "Society & Culture"
+subcategory = "Philosophy"
+# itunes:owner is needed only when submitting to Apple/Spotify; left empty until the author agrees
+owner_name = ""
+owner_email = ""
