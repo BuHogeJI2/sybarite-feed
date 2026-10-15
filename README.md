@@ -7,6 +7,11 @@ Sybarite") as a podcast feed. The lectures are in Russian.
 Once a day the update downloads the audio of new videos, uploads it to Cloudflare R2 and
 rebuilds `feed.xml`. The archive is filled in batches, newest videos first.
 
+When a video fails, the run downloads the shortest episodes already in the feed, up to three. If
+one of them works, the video is skipped and tried again by the next runs, at most 3 times. If all
+fail, YouTube access is broken (usually expired cookies): the run stops with an error and counts
+nothing.
+
 ## How to listen
 
 Feed URL: **https://podcast.sibarit.org/feed.xml**

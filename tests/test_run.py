@@ -7,7 +7,7 @@ from factories import make_config, make_episode
 from sybarite_feed.channel import ChannelVideo
 from sybarite_feed.download import DownloadedAudio
 from sybarite_feed.rss import COVER_KEY
-from sybarite_feed.run import FEED_KEY, MAX_CONSECUTIVE_FAILURES, STATE_KEY, run_update
+from sybarite_feed.run import FEED_KEY, STATE_KEY, run_update
 from sybarite_feed.select import MAX_ATTEMPTS
 from sybarite_feed.state import State, state_from_json, state_to_json
 from sybarite_feed.storage import ConflictError, LocalStorage
@@ -118,13 +118,18 @@ def test_limit_zero_only_republishes_feed(storage, work_dir):
     assert storage.get(STATE_KEY) == state_before
 
 
-def test_failure_counts_when_other_downloads_work(storage, work_dir):
-    result = run(storage, FakeDownloader(work_dir, failing={"a", "c"}), "a", "b", "c")
+def test_failures_count_when_a_published_episode_downloads(storage, work_dir):
+    run(storage, FakeDownloader(work_dir), "x")
+    downloader = FakeDownloader(work_dir, failing={"a", "c"})
+
+    result = run(storage, downloader, "a", "b", "c")
 
     assert result.ok
     assert result.added == ["b"]
     assert result.failed == ["a", "c"]
+    assert downloader.calls == ["a", "x", "b", "c", "x"]
     assert saved_state(storage).failures == {"a": 1, "c": 1}
+    assert list(work_dir.iterdir()) == []
 
 
 def test_success_clears_old_failures(storage, work_dir):
@@ -133,7 +138,7 @@ def test_success_clears_old_failures(storage, work_dir):
     assert saved_state(storage).failures == {}
 
 
-def test_failures_do_not_count_when_nothing_works(storage, work_dir):
+def test_failure_stops_the_first_run(storage, work_dir):
     result = run(storage, FakeDownloader(work_dir, failing={"a"}), "a")
 
     assert not result.ok
@@ -141,16 +146,53 @@ def test_failures_do_not_count_when_nothing_works(storage, work_dir):
     assert feed_guids(storage) == []
 
 
-def test_stops_after_consecutive_failures_without_counting(storage, work_dir):
+def test_bad_videos_do_not_block_the_next_ones(storage, work_dir):
     run(storage, FakeDownloader(work_dir), "x")
-    video_ids = [f"v{n}" for n in range(MAX_CONSECUTIVE_FAILURES + 2)]
-    downloader = FakeDownloader(work_dir, failing=set(video_ids))
 
-    result = run(storage, downloader, *video_ids)
+    result = run(storage, FakeDownloader(work_dir, failing={"a", "b", "c"}), "a", "b", "c", "d")
+
+    assert result.ok
+    assert result.added == ["d"]
+    assert saved_state(storage).failures == {"a": 1, "b": 1, "c": 1}
+
+
+def test_stops_without_counting_when_a_published_episode_fails_too(storage, work_dir):
+    run(storage, FakeDownloader(work_dir), "x")
+    storage.writes.clear()
+    downloader = FakeDownloader(work_dir, failing={"a", "b", "x"})
+
+    result = run(storage, downloader, "a", "b")
 
     assert not result.ok
-    assert downloader.calls == video_ids[:MAX_CONSECUTIVE_FAILURES]
+    assert downloader.calls == ["a", "x"]
     assert saved_state(storage).failures == {}
+    assert storage.writes == [COVER_KEY, FEED_KEY]
+
+
+def test_tries_the_next_episode_when_the_shortest_was_removed(storage, work_dir):
+    run(storage, FakeDownloader(work_dir), "x")
+    state = saved_state(storage)
+    state.episodes["removed"] = make_episode("removed", duration=200)
+    storage.put(STATE_KEY, state_to_json(state).encode(), "application/json")
+    downloader = FakeDownloader(work_dir, failing={"a", "removed"})
+
+    result = run(storage, downloader, "a", "b")
+
+    assert result.added == ["b"]
+    assert downloader.calls == ["a", "removed", "x", "b"]
+    assert saved_state(storage).failures == {"a": 1}
+
+
+def test_checks_access_with_the_shortest_episode(storage, work_dir):
+    run(storage, FakeDownloader(work_dir), "x")
+    state = saved_state(storage)
+    state.episodes["short"] = make_episode("short", duration=200)
+    storage.put(STATE_KEY, state_to_json(state).encode(), "application/json")
+    downloader = FakeDownloader(work_dir, failing={"a"})
+
+    run(storage, downloader, "a")
+
+    assert downloader.calls == ["a", "short"]
 
 
 def test_video_is_skipped_after_max_attempts(storage, work_dir):

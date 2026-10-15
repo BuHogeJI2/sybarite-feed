@@ -20,11 +20,12 @@ The Codex review found problems in how the daily run handles failures, secrets a
 
 ## Decisions & rationale
 - **Failure rule (#2 and #4): test access with a known-good video instead of counting a
-  streak.** When a video fails, the run downloads the **shortest episode already in the state**
-  (the canary) and then deletes the file. At the time of writing the shortest is 894 s, about
-  14 MB.
-  - Canary works: the failure is the video's fault. Count it now, save the state, continue.
-  - Canary fails: YouTube access is broken. Count nothing, publish the feed, and exit red.
+  streak.** When a video fails, the run downloads the **shortest episodes already in the state**,
+  one at a time and at most three (`KNOWN_EPISODES_TO_TRY`), and deletes each file. At the time of
+  writing the shortest is 894 s, about 14 MB. Revised after review: one fixed canary stalled every
+  run once that episode was removed from YouTube.
+  - One works: the failure is the video's fault. Count it now, save the state, continue.
+  - All fail: YouTube access is broken. Count nothing, publish the feed, and exit red.
   - Empty state (no canary): treat it as an access failure.
 
   This replaces `MAX_CONSECUTIVE_FAILURES`, the `streak` list and the tail-counting block.
@@ -85,8 +86,7 @@ The Codex review found problems in how the daily run handles failures, secrets a
 - **Goal:** bad videos are counted and skipped; only a real access failure stops the run.
 - **Changes:**
   - `run.py`:
-    - `_canary(state)` picks the shortest episode;
-    - on an exception, call `download(canary_id)` and delete the file;
+    - `_youtube_works` tries up to three of the shortest episodes;
     - count and save, or publish and return `ok=False`;
     - remove `MAX_CONSECUTIVE_FAILURES`, `streak` and the tail block.
   - `tests/test_run.py`:

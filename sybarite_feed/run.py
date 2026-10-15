@@ -9,13 +9,13 @@ from sybarite_feed.channel import ChannelVideo
 from sybarite_feed.config import Config
 from sybarite_feed.download import DownloadedAudio
 from sybarite_feed.rss import COVER_KEY, build_feed
-from sybarite_feed.select import select_batch
+from sybarite_feed.select import MAX_ATTEMPTS, select_batch
 from sybarite_feed.state import State, state_from_json, state_to_json
 from sybarite_feed.storage import Storage
 
 STATE_KEY = "state.json"
 FEED_KEY = "feed.xml"
-MAX_CONSECUTIVE_FAILURES = 3
+KNOWN_EPISODES_TO_TRY = 3
 
 log = logging.getLogger(__name__)
 
@@ -49,9 +49,6 @@ def run_update(
     log.info("channel has %d videos, %d in the feed, %d selected", len(videos), len(state.episodes), len(batch))
 
     result = RunResult()
-    # failures since the last successful download; they count against a video only once a later
-    # download in the same run succeeds, so expired cookies or a YouTube block don't burn attempts
-    streak: list[str] = []
     for index, video in enumerate(batch):
         if index:
             pause()
@@ -62,11 +59,16 @@ def run_update(
         except Exception as error:
             log.warning("failed %s: %s", video.id, error)
             result.failed.append(video.id)
-            streak.append(video.id)
-            if len(streak) >= MAX_CONSECUTIVE_FAILURES:
-                log.error("stopping: %d downloads failed in a row", len(streak))
+            if not _youtube_works(state, download, pause):
+                log.error("stopping: published episodes don't download either, so YouTube access is broken")
+                _publish_feed(storage, state, config)
                 result.ok = False
                 return result
+            attempts = state.failures.get(video.id, 0) + 1
+            state.failures[video.id] = attempts
+            if attempts >= MAX_ATTEMPTS:
+                log.error("giving up on %s after %d failed attempts", video.id, attempts)
+            etag = _save_state(storage, state, etag)
             continue
 
         storage.upload_file(
@@ -78,26 +80,34 @@ def run_update(
         audio.path.unlink()
         state.episodes[video.id] = audio.episode
         state.failures.pop(video.id, None)
-        _count_failures(state, streak)
-        streak = []
         etag = _save_state(storage, state, etag)
         _publish_feed(storage, state, config)
         result.added.append(video.id)
         log.info("added %s: %s", video.id, audio.episode.title)
 
-    if result.added and streak:
-        _count_failures(state, streak)
-        _save_state(storage, state, etag)
     if not result.added:
         # keeps the feed current after a config change or a run that stopped before publishing
         _publish_feed(storage, state, config)
-        result.ok = not streak
     return result
 
 
-def _count_failures(state: State, video_ids: list[str]) -> None:
-    for video_id in video_ids:
-        state.failures[video_id] = state.failures.get(video_id, 0) + 1
+def _youtube_works(state: State, download: Callable[[str], DownloadedAudio], pause: Callable[[], None]) -> bool:
+    # a failed video counts against its attempts only if a published episode still downloads; otherwise
+    # expired cookies or a YouTube block would use up the attempts of every video in the batch. Several
+    # are tried because a published video can be removed from YouTube later
+    shortest = sorted(state.episodes.values(), key=lambda episode: episode.duration)
+    for known in shortest[:KNOWN_EPISODES_TO_TRY]:
+        pause()
+        log.info("checking YouTube access with %s", known.id)
+        try:
+            audio = download(known.id)
+        # yt-dlp and urllib raise many unrelated error types
+        except Exception as error:
+            log.warning("failed %s: %s", known.id, error)
+            continue
+        audio.path.unlink()
+        return True
+    return False
 
 
 def _save_state(storage: Storage, state: State, etag: str | None) -> str:
