@@ -1,23 +1,24 @@
 # sybarite-feed
 
 Lectures from Genadi Valdberg's YouTube channel
-[«Записки воинствующего сибарита»](https://www.youtube.com/@GenadiValdberg) as a podcast feed.
+[«Записки воинствующего сибарита»](https://www.youtube.com/@GenadiValdberg) ("Notes of a Militant
+Sybarite") as a podcast feed. The lectures are in Russian.
 
 Once a day the update downloads the audio of new videos, uploads it to Cloudflare R2 and
 rebuilds `feed.xml`. The archive is filled in batches, newest videos first.
 
-## Как слушать
+## How to listen
 
-Адрес подкаста: **https://podcast.sibarit.org/feed.xml**
+Feed URL: **https://podcast.sibarit.org/feed.xml**
 
-Добавьте его в приложение для подкастов по ссылке:
+Add it to a podcast app by URL:
 
-- **Apple Podcasts** (iPhone, Mac): Медиатека → ⋯ → «Подписаться на шоу по URL».
-- **Pocket Casts**: Поиск → вставить адрес.
-- **Overcast**: + → «Add URL».
-- **AntennaPod** (Android): + → «Добавить подкаст по адресу RSS».
+- **Apple Podcasts** (iPhone, Mac): Library → ⋯ → "Follow a Show by URL".
+- **Pocket Casts**: Search → paste the URL.
+- **Overcast**: + → "Add URL".
+- **AntennaPod** (Android): + → "Add podcast by RSS address".
 
-Spotify и Яндекс Музыка не умеют добавлять подкаст по ссылке.
+Spotify and Yandex Music can't add a podcast by URL.
 
 ## Run from laptop
 
