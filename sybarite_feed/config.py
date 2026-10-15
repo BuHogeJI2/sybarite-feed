@@ -23,6 +23,9 @@ class FeedConfig:
     subcategory: str = ""
     owner_name: str = ""
     owner_email: str = ""
+    donate_url: str = ""
+    credit: str = ""
+    credit_url: str = ""
 
 
 @dataclass(frozen=True)

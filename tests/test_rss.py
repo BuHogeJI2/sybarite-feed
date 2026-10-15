@@ -33,6 +33,25 @@ def test_owner_only_when_email_is_set():
     assert channel.findtext("itunes:owner/itunes:email", namespaces=NS) == "me@example.com"
 
 
+def test_channel_description_ends_with_donate_and_credit_links():
+    feed = make_feed_config(
+        description="О канале.\n\nПочта & сайт",
+        donate_url="https://www.paypal.com/donate?hosted_button_id=X&a=1",
+        credit="BuHogeJI",
+        credit_url="https://github.com/BuHogeJI2/sybarite-feed",
+    )
+    assert parse(build_feed([], feed, BASE_URL)).findtext("description") == (
+        "<p>О канале.</p>"
+        "<p>Почта &amp; сайт</p>"
+        '<p><a href="https://www.paypal.com/donate?hosted_button_id=X&amp;a=1">Поддержать канал через PayPal</a></p>'
+        '<p>Feed created by <a href="https://github.com/BuHogeJI2/sybarite-feed">BuHogeJI</a></p>'
+    )
+
+
+def test_channel_description_without_links():
+    assert parse(build_feed([], make_feed_config(), BASE_URL)).findtext("description") == "<p>Лекции</p>"
+
+
 def test_episode_item():
     item = parse(build_feed([make_episode()], make_feed_config(), BASE_URL)).find("item")
     assert item.findtext("title") == "Трусость или мудрость? №184"

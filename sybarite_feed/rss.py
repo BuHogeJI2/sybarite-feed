@@ -23,7 +23,7 @@ def build_feed(episodes: Iterable[Episode], feed: FeedConfig, base_url: str) -> 
     channel = _sub(rss, "channel")
     _sub(channel, "title", feed.title)
     _sub(channel, "link", feed.link)
-    _sub(channel, "description", feed.description)
+    _sub(channel, "description", channel_html(feed))
     _sub(channel, "language", feed.language)
     ET.SubElement(channel, f"{{{ATOM}}}link", href=f"{base_url}/feed.xml", rel="self", type="application/rss+xml")
     image = _sub(channel, "image")
@@ -62,10 +62,26 @@ def build_feed(episodes: Iterable[Episode], feed: FeedConfig, base_url: str) -> 
     return ET.tostring(rss, encoding="utf-8", xml_declaration=True)
 
 
+def channel_html(feed: FeedConfig) -> str:
+    body = _paragraphs_html(feed.description)
+    if feed.donate_url:
+        body += f'<p><a href="{html.escape(feed.donate_url)}">Поддержать канал через PayPal</a></p>'
+    if feed.credit:
+        credit = html.escape(feed.credit)
+        if feed.credit_url:
+            credit = f'<a href="{html.escape(feed.credit_url)}">{credit}</a>'
+        body += f"<p>Feed created by {credit}</p>"
+    return body
+
+
 def episode_html(episode: Episode) -> str:
-    paragraphs = [paragraph.strip() for paragraph in episode.description.split("\n\n") if paragraph.strip()]
-    body = "".join(f"<p>{html.escape(paragraph).replace(chr(10), '<br>')}</p>" for paragraph in paragraphs)
+    body = _paragraphs_html(episode.description)
     return f'{body}<p><a href="{html.escape(episode.video_url)}">Видео на YouTube</a></p>'
+
+
+def _paragraphs_html(text: str) -> str:
+    paragraphs = [paragraph.strip() for paragraph in text.split("\n\n") if paragraph.strip()]
+    return "".join(f"<p>{html.escape(paragraph).replace(chr(10), '<br>')}</p>" for paragraph in paragraphs)
 
 
 def _sub(parent: ET.Element, tag: str, text: str | None = None, **attributes: str) -> ET.Element:
