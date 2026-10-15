@@ -43,7 +43,9 @@ def test_channel_description_ends_with_donate_and_credit_links():
     assert parse(build_feed([], feed, BASE_URL)).findtext("description") == (
         "<p>О канале.</p>"
         "<p>Почта &amp; сайт</p>"
-        '<p><a href="https://www.paypal.com/donate?hosted_button_id=X&amp;a=1">Поддержать канал через PayPal</a></p>'
+        "<p>Поддержать канал через PayPal: "
+        '<a href="https://www.paypal.com/donate?hosted_button_id=X&amp;a=1">'
+        "https://www.paypal.com/donate?hosted_button_id=X&amp;a=1</a></p>"
         '<p>Feed created by <a href="https://github.com/BuHogeJI2/sybarite-feed">BuHogeJI</a></p>'
     )
 

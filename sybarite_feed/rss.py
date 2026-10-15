@@ -65,7 +65,9 @@ def build_feed(episodes: Iterable[Episode], feed: FeedConfig, base_url: str) -> 
 def channel_html(feed: FeedConfig) -> str:
     body = _paragraphs_html(feed.description)
     if feed.donate_url:
-        body += f'<p><a href="{html.escape(feed.donate_url)}">Поддержать канал через PayPal</a></p>'
+        donate_url = html.escape(feed.donate_url)
+        # Apple Podcasts drops <a> tags in the show description and links only bare URLs
+        body += f'<p>Поддержать канал через PayPal: <a href="{donate_url}">{donate_url}</a></p>'
     if feed.credit:
         credit = html.escape(feed.credit)
         if feed.credit_url:
