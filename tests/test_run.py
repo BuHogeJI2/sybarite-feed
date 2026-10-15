@@ -222,3 +222,15 @@ def test_conflict_stops_the_run(tmp_path, work_dir):
 
     assert downloader.calls == ["a"]
     assert saved_state(storage).failures == {"other": 1}
+
+
+def test_feed_that_does_not_parse_is_not_published(storage, work_dir):
+    run(storage, FakeDownloader(work_dir), "a")
+    state = saved_state(storage)
+    state.episodes["bad"] = make_episode("bad", title="bad\x01title")
+    storage.put(STATE_KEY, state_to_json(state).encode(), "application/json")
+
+    with pytest.raises(ET.ParseError):
+        run(storage, FakeDownloader(work_dir), "a", limit=0)
+
+    assert feed_guids(storage) == ["a"]

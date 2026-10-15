@@ -1,6 +1,7 @@
 import logging
 import random
 import time
+import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -123,4 +124,6 @@ def _save_state(storage: Storage, state: State, etag: str | None) -> str:
 
 def _publish_feed(storage: Storage, state: State, config: Config) -> None:
     feed = build_feed(state.episodes.values(), config.feed, config.storage.base_url)
+    # a feed that doesn't parse would replace the working one in every subscriber's app
+    ET.fromstring(feed)
     storage.put(FEED_KEY, feed, "application/rss+xml; charset=utf-8", cache_control="public, max-age=300")

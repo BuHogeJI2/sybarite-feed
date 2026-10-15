@@ -5,7 +5,7 @@ from pathlib import Path
 from yt_dlp import YoutubeDL
 
 from sybarite_feed.channel import watch_url
-from sybarite_feed.episode import Episode
+from sybarite_feed.episode import Episode, xml_safe
 from sybarite_feed.metadata import original_title
 
 MIME_TYPES = {"m4a": "audio/x-m4a", "mp3": "audio/mpeg"}
@@ -35,8 +35,8 @@ def download_audio(video_id: str, out_dir: Path, audio_format: str, cookie_file:
     path = Path(info["requested_downloads"][0]["filepath"])
     episode = Episode(
         id=video_id,
-        title=title,
-        description=info.get("description") or "",
+        title=xml_safe(title),
+        description=xml_safe(info.get("description") or ""),
         published=published_at(info),
         duration=int(info["duration"]),
         file_name=path.name,
