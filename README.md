@@ -39,6 +39,10 @@ Without `--limit` a run takes `batch_size` videos from `config.toml`. A home con
 YouTube cookies. If a run on GitHub Actions saves the state at the same time, the later run stops
 with an error and loses nothing; start it again.
 
+The daily workflow always takes the newest yt-dlp, while the laptop uses the version in `uv.lock`.
+If downloads fail on the laptop, upgrade it with
+`uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs`.
+
 ## Refresh cookies
 
 GitHub runners can download from YouTube only with the cookies of a logged-in account, stored in

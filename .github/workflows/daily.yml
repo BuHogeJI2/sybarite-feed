@@ -28,6 +28,12 @@ jobs:
       # yt-dlp needs ffmpeg to turn YouTube's DASH m4a into a normal m4a
       - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
 
+      # YouTube changes break older yt-dlp releases; the lock is upgraded on the runner only
+      - name: upgrade yt-dlp
+        run: |
+          uv sync --no-dev --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs
+          uv run --locked --no-dev python -c "from importlib.metadata import version as v; print('yt-dlp', v('yt-dlp'), 'yt-dlp-ejs', v('yt-dlp-ejs'))"
+
       # anonymous downloads from runners fail with "Sign in to confirm you're not a bot"
       - name: write cookies
         run: printf '%s\n' "$YT_COOKIES" > "$RUNNER_TEMP/cookies.txt"
