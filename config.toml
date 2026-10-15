@@ -23,5 +23,5 @@ owner_name = ""
 owner_email = ""
 
 [storage]
-# public URL of the R2 bucket; the r2.dev address is for testing until the custom domain (Phase 6)
-base_url = "https://pub-cfe76c0e963b4053af7a7f76d27b37d8.r2.dev"
+# public URL of the R2 bucket. Subscribers store the feed URL built from it, so changing it loses them
+base_url = "https://podcast.sibarit.org"

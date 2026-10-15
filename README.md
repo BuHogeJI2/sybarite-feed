@@ -6,6 +6,19 @@ Lectures from Genadi Valdberg's YouTube channel
 Once a day the update downloads the audio of new videos, uploads it to Cloudflare R2 and
 rebuilds `feed.xml`. The archive is filled in batches, newest videos first.
 
+## Как слушать
+
+Адрес подкаста: **https://podcast.sibarit.org/feed.xml**
+
+Добавьте его в приложение для подкастов по ссылке:
+
+- **Apple Podcasts** (iPhone, Mac): Медиатека → ⋯ → «Подписаться на шоу по URL».
+- **Pocket Casts**: Поиск → вставить адрес.
+- **Overcast**: + → «Add URL».
+- **AntennaPod** (Android): + → «Добавить подкаст по адресу RSS».
+
+Spotify и Яндекс Музыка не умеют добавлять подкаст по ссылке.
+
 ## Run from laptop
 
 Needs [uv](https://docs.astral.sh/uv/), deno and ffmpeg:
