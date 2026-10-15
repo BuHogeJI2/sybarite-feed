@@ -1,0 +1,52 @@
+name: daily
+
+on:
+  schedule:
+    - cron: "17 21 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Max videos to download (empty = batch_size from config.toml)
+        required: false
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: feed
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - uses: denoland/setup-deno@v2
+      # yt-dlp needs ffmpeg to turn YouTube's DASH m4a into a normal m4a
+      - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+
+      # anonymous downloads from runners fail with "Sign in to confirm you're not a bot"
+      - name: write cookies
+        run: printf '%s\n' "$YT_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+        env:
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+
+      - name: update feed
+        run: uv run --locked --no-dev python -m sybarite_feed run ${LIMIT:+--limit "$LIMIT"}
+        env:
+          LIMIT: ${{ inputs.limit }}
+          YT_COOKIES_FILE: ${{ runner.temp }}/cookies.txt
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+
+      # GitHub disables scheduled workflows in public repos after 60 days without repository activity
+      - name: keep schedule alive
+        if: always()
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/daily.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}
