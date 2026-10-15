@@ -1,0 +1,7 @@
+[channel]
+url = "https://www.youtube.com/@GenadiValdberg/videos"
+# the original Russian track; some videos also have an AI-dubbed en-US track.
+# The fallback covers tracks without a language label.
+audio_format = "bestaudio[ext=m4a][language=ru]/bestaudio[ext=m4a]"
+min_duration = 120
+batch_size = 50
