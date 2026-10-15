@@ -63,7 +63,7 @@ The Codex review found problems in how the daily run handles failures, secrets a
 
 ## Phases
 
-### Phase 1 — Cookie validation and masking
+### Phase 1 — Cookie validation and masking (done)
 - **Goal:** a bad cookie file fails with a message that contains no values, and good values are
   masked.
 - **Changes:**
@@ -80,9 +80,19 @@ The Codex review found problems in how the daily run handles failures, secrets a
 - **Verification:** `uv run pytest`. Then run `check-cookies` on a synthetic bad file and grep
   its output for the fake value; it should come back empty.
 - **Done when:** the tests pass and the workflow has the check step.
-- **Commit:** `fix: validate and mask YouTube cookies before use`
+- **Result:**
+  - A synthetic bad file fails with "line 2: invalid expiry"; the fake value is not in the output.
+  - Codex's review of the implementation found two more gaps, both fixed before the commit:
+    - an expiry of 400 digits passed the regex, then `http.cookiejar` (`int(float(expires))`)
+      overflowed and yt-dlp printed the whole line. Such expiries are now rejected;
+    - a zero-byte file passed, because the header check never ran.
+  - A test loads an accepted file through the real `YoutubeDLCookieJar` and checks that nothing is
+    printed.
+  - Run 38784191261: "23 cookies are valid"; the `::add-mask::` lines are hidden by GitHub and no
+    cookie value is in the log.
+- **Commit:** `20d7ad4 fix: validate and mask YouTube cookies before use`
 
-### Phase 2 — Canary-based failure rule
+### Phase 2 — Canary-based failure rule (done)
 - **Goal:** bad videos are counted and skipped; only a real access failure stops the run.
 - **Changes:**
   - `run.py`:
@@ -97,9 +107,14 @@ The Codex review found problems in how the daily run handles failures, secrets a
   - `README.md`: one line on the rule.
 - **Verification:** `uv run pytest`.
 - **Done when:** the tests pass and `grep -rn MAX_CONSECUTIVE sybarite_feed tests` is empty.
-- **Commit:** `fix: count failed videos only when a known video still downloads`
+- **Result:**
+  - Codex's review found that one fixed canary stalls every run once that episode is removed from
+    YouTube. Changed to up to three of the shortest episodes (`KNOWN_EPISODES_TO_TRY`), with a
+    regression test for a removed shortest episode.
+  - Not yet seen on real YouTube: no video has failed since the change.
+- **Commit:** `0a7f3ca fix: count failed videos only when a known video still downloads`
 
-### Phase 3 — XML-safe text
+### Phase 3 — XML-safe text (done)
 - **Goal:** metadata can't break `feed.xml`.
 - **Changes:**
   - `episode.py` gets `xml_safe(text)`, a regex for the characters outside the XML 1.0 range.
@@ -111,9 +126,10 @@ The Codex review found problems in how the daily run handles failures, secrets a
       stays unchanged.
 - **Verification:** `uv run pytest`.
 - **Done when:** the tests pass.
-- **Commit:** `fix: strip XML-invalid characters from episode text`
+- **Result:** tests pass (53 in total after all phases).
+- **Commit:** `b746003 fix: strip XML-invalid characters from episode text`
 
-### Phase 4 — Runtime yt-dlp upgrade
+### Phase 4 — Runtime yt-dlp upgrade (done)
 - **Goal:** each run uses the newest yt-dlp and logs which version it used.
 - **Changes:**
   - `daily.yml`: a step after setup-deno that runs
@@ -123,9 +139,11 @@ The Codex review found problems in how the daily run handles failures, secrets a
 - **Verification:** run the same `uv sync` command locally, then `git checkout uv.lock`. After
   the push, run the workflow by hand with `limit=1` and read the version line in the log.
 - **Done when:** a dispatched run logs the versions and finishes green.
-- **Commit:** `ci: upgrade yt-dlp on every run`
+- **Result:** run 38784191261 logged `yt-dlp 2026.8.19 yt-dlp-ejs 0.8.0` (already the newest, so the
+  lock didn't change) and finished green.
+- **Commit:** `4e876c5 ci: upgrade yt-dlp on every run`
 
-### Phase 5 — Workflow hardening
+### Phase 5 — Workflow hardening (done)
 - **Goal:** the job with the secrets has no write permission, and the actions can't change under
   us.
 - **Changes:**
@@ -135,9 +153,15 @@ The Codex review found problems in how the daily run handles failures, secrets a
       `permissions: actions: write`, with no checkout;
     - the three `uses:` lines pinned to SHAs.
 - **Verification:** no local workflow linter is installed. After the push, run the workflow by
-  hand with `limit=0`: both jobs should be green.
+  hand: both jobs should be green.
 - **Done when:** that run is green.
-- **Commit:** `ci: pin actions and isolate keepalive permissions`
+- **Result:**
+  - Pinned: checkout v7.0.1, setup-uv v10.3.0, setup-deno v2.0.5. `setup-deno@v2` was a branch,
+    not a tag, at the same commit as v2.0.5.
+  - Run 38784191261 (`limit=1`, manual): both jobs green. `update` had only `Contents: read`;
+    `keepalive` had `Actions: write` and its enable call succeeded. The run added one episode
+    (O8k0lppGqUk), so the feed has 30.
+- **Commit:** `5ff8dee ci: pin actions and isolate keepalive permissions`
 
 ## Phase dependencies
 | Phase | Depends on | Blocks | Parallel with | Nature of the dependency |
