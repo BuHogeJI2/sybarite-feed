@@ -13,30 +13,33 @@ env:
   # the original Russian track; some videos also carry an AI-dubbed en-US track
   FORMAT: bestaudio[ext=m4a][language=ru]
 
+# anonymous downloads (with and without a PO token) fail on runners with LOGIN_REQUIRED
 jobs:
-  plain:
+  cookies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - uses: denoland/setup-deno@v2
-      - run: pip install -U yt-dlp && yt-dlp --version
+      - run: pip install -U "yt-dlp[default]" && yt-dlp --version
 
-      - name: list channel
-        continue-on-error: true
-        run: yt-dlp --flat-playlist --print id "$CHANNEL_URL" | wc -l
+      - name: write cookies
+        run: printf '%s\n' "$YT_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+        env:
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
 
       - name: download
         run: |
           mkdir -p tmp
           time yt-dlp -v -f "$FORMAT" --extractor-args "youtube:lang=ru" \
+            --cookies "$RUNNER_TEMP/cookies.txt" \
             -o "tmp/%(id)s.%(ext)s" \
             --print "after_move:format=%(format_id)s language=%(language)s title=%(title)s" \
             "$VIDEO_URL"
           ls -l tmp
 
-  po-token:
+  cookies-po-token:
     runs-on: ubuntu-latest
     services:
       bgutil:
@@ -44,20 +47,22 @@ jobs:
         ports:
           - 4416:4416
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - uses: denoland/setup-deno@v2
-      - run: pip install -U yt-dlp bgutil-ytdlp-pot-provider && yt-dlp --version
+      - run: pip install -U "yt-dlp[default]" bgutil-ytdlp-pot-provider && yt-dlp --version
 
-      - name: list channel
-        continue-on-error: true
-        run: yt-dlp --flat-playlist --print id "$CHANNEL_URL" | wc -l
+      - name: write cookies
+        run: printf '%s\n' "$YT_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+        env:
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
 
       - name: download
         run: |
           mkdir -p tmp
           time yt-dlp -v -f "$FORMAT" --extractor-args "youtube:lang=ru" \
+            --cookies "$RUNNER_TEMP/cookies.txt" \
             -o "tmp/%(id)s.%(ext)s" \
             --print "after_move:format=%(format_id)s language=%(language)s title=%(title)s" \
             "$VIDEO_URL"
