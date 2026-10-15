@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.0
       - uses: denoland/setup-deno@v2
       # yt-dlp needs ffmpeg to turn YouTube's DASH m4a into a normal m4a
       - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
