@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sybarite_feed.config import FeedConfig
+from sybarite_feed.config import ChannelConfig, Config, FeedConfig, StorageConfig
 from sybarite_feed.episode import Episode
 
 
@@ -30,3 +30,17 @@ def make_feed_config(**overrides) -> FeedConfig:
         "subcategory": "Philosophy",
     }
     return FeedConfig(**{**fields, **overrides})
+
+
+def make_config(**channel_overrides) -> Config:
+    channel = {
+        "url": "https://www.youtube.com/@GenadiValdberg/videos",
+        "audio_format": "bestaudio[ext=m4a]",
+        "min_duration": 120,
+        "batch_size": 50,
+    }
+    return Config(
+        channel=ChannelConfig(**{**channel, **channel_overrides}),
+        feed=make_feed_config(),
+        storage=StorageConfig(base_url="https://feed.example.com"),
+    )

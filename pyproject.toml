@@ -3,7 +3,10 @@ name = "sybarite-feed"
 version = "0.1.0"
 description = "Genadi Valdberg's YouTube lectures as a podcast feed"
 requires-python = ">=3.12"
-dependencies = ["yt-dlp[default]"]
+dependencies = [
+    "boto3>=1.43.114",
+    "yt-dlp[default]",
+]
 
 [dependency-groups]
 dev = ["pytest"]

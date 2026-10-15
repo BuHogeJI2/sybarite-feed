@@ -25,12 +25,22 @@ class FeedConfig:
 
 
 @dataclass(frozen=True)
+class StorageConfig:
+    base_url: str
+
+
+@dataclass(frozen=True)
 class Config:
     channel: ChannelConfig
     feed: FeedConfig
+    storage: StorageConfig
 
 
 def load_config(path: Path = Path("config.toml")) -> Config:
     with path.open("rb") as file:
         data = tomllib.load(file)
-    return Config(channel=ChannelConfig(**data["channel"]), feed=FeedConfig(**data["feed"]))
+    return Config(
+        channel=ChannelConfig(**data["channel"]),
+        feed=FeedConfig(**data["feed"]),
+        storage=StorageConfig(**data["storage"]),
+    )

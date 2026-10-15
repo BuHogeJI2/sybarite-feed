@@ -19,3 +19,7 @@ subcategory = "Philosophy"
 # itunes:owner is needed only when submitting to Apple/Spotify; left empty until the author agrees
 owner_name = ""
 owner_email = ""
+
+[storage]
+# public URL of the R2 bucket; the r2.dev address is for testing until the custom domain (Phase 6)
+base_url = "https://pub-cfe76c0e963b4053af7a7f76d27b37d8.r2.dev"
