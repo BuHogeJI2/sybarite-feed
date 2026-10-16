@@ -111,7 +111,9 @@ The Codex review found problems in how the daily run handles failures, secrets a
   - Codex's review found that one fixed canary stalls every run once that episode is removed from
     YouTube. Changed to up to three of the shortest episodes (`KNOWN_EPISODES_TO_TRY`), with a
     regression test for a removed shortest episode.
-  - Not yet seen on real YouTube: no video has failed since the change.
+  - Seen on real YouTube in the first scheduled run: one video broke off mid-download, a
+    published episode still downloaded, so the failure was counted and the run went on (49 of 50
+    added).
 - **Commit:** `0a7f3ca fix: count failed videos only when a known video still downloads`
 
 ### Phase 3 — XML-safe text (done)

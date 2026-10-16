@@ -6,12 +6,13 @@ backfill is in progress. Each item below gets its own plan in `docs/plans/` befo
 ## Next — before submitting to the catalogs
 
 ### 1. Smaller feed
-- **Why:** `feed.xml` is 436 KB for 30 episodes, so about 15 MB for all 1054. Apps download it
-  often. Catalogs may have size limits; check Apple's, Яндекс Музыка's and Spotify's before
-  submitting.
-- **Notes:** most of the size is the block repeated at the end of every video description
-  (PayPal, VK, the site, `-----` separator lines). The show description already has the PayPal
-  link. Options: cut the block, shorten it, or drop only the separator lines. Measure first.
+- **Why:** `feed.xml` was 436 KB for 79 episodes, so about 5.8 MB for all 1054. Apps download it
+  often, though compressed (gzip) it is about 11 times smaller. Catalogs may have size limits;
+  check Apple's, Яндекс Музыка's and Spotify's before submitting.
+- **Done:** the `-----` separator lines (133 dashes each) become paragraph breaks and trailing
+  spaces are dropped when the feed is built: 436 → 385 KB for 79 episodes.
+- **Kept:** the block repeated at the end of every description (the site, VK, PayPal, about
+  700 bytes); it has the author's links, and gzip makes the repetition almost free.
 
 ### 2. Author info
 - **Why:** this was left out until the author agreed.
@@ -44,8 +45,9 @@ backfill is in progress. Each item below gets its own plan in `docs/plans/` befo
 - Whether the keepalive really resets GitHub's 60-day counter.
 - A check from outside GitHub, e.g. an alert if `feed.xml` hasn't changed in N days. GitHub
   can't report a schedule that silently stopped.
-- The canary failure rule hasn't run on real YouTube yet; check the log the first time a video
-  fails.
+- The canary failure rule worked in the first scheduled run (2026-10-15, 23:42 UTC; GitHub started
+  it 25 minutes late): `_TC27-Igwdw` broke off mid-download ("1464540 more expected"), the check
+  with `_hZ8V1Zc59s` passed, the failure was counted, and 49 of 50 videos were added.
 
 ### 6. Leftover review findings
 - **#7** Overlapping runs (laptop and Actions) can publish a stale `feed.xml`. Cheap part: re-read
