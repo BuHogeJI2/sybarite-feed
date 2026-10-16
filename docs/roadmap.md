@@ -14,12 +14,14 @@ backfill is in progress. Each item below gets its own plan in `docs/plans/` befo
 - **Kept:** the block repeated at the end of every description (the site, VK, PayPal, about
   700 bytes); it has the author's links, and gzip makes the repetition almost free.
 
-### 2. Author info
+### 2. Author info (done)
 - **Why:** this was left out until the author agreed.
-- **Notes:**
-  - `itunes:owner` (name and email). The email is public in the feed, and catalogs use it to
-    verify ownership. **Open:** his email or the feed maintainer's.
-  - A link to his site, `https://genadivaldberg.wordpress.com/`.
+- **Done (2026-10-16):**
+  - `itunes:owner`: «Геннадий Вальдберг», `podcast@sibarit.org`. The email is public in the feed,
+    and catalogs send ownership checks to it. Cloudflare Email Routing forwards it to the
+    maintainer's Gmail; it works only while `sibarit.org` is renewed (auto-renew is on).
+  - «Сайт: https://genadivaldberg.wordpress.com/» in the show description, before PayPal.
+    `<link>` stays the YouTube channel.
   - `podcast:funding` with the PayPal link; apps that support it show a "Support" button.
 
 ### 3. Remove an episode
@@ -36,7 +38,7 @@ backfill is in progress. Each item below gets its own plan in `docs/plans/` befo
   - Яндекс Музыка (Яндекс Подкасты form).
   - Spotify for Creators (accepts an RSS link).
   - Podcast Index.
-  - Depends on 2 (owner email) and preferably on 1 (feed size).
+  - Ready: 1 and 2 are done.
 
 ## Reliability
 
