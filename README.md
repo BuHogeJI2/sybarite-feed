@@ -14,6 +14,8 @@ nothing.
 
 ## How to listen
 
+Page for listeners: **https://sibarit.org** ("Open in app" buttons).
+
 Feed URL: **https://podcast.sibarit.org/feed.xml**
 
 Add it to a podcast app by URL:
@@ -56,6 +58,11 @@ with "Sign in to confirm you're not a bot" and GitHub sends an email. To renew t
    allow the extension in private windows first).
 4. Close the private window without logging out; logging out invalidates the cookies.
 5. `gh secret set YT_COOKIES < cookies.txt`, then delete the file.
+
+## Listener page
+
+`site/` is a static page with no build step. Cloudflare Pages deploys it on every push to `master`
+that changes `site/`.
 
 ## Development
 
