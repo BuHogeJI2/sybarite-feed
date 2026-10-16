@@ -39,6 +39,9 @@ backfill is in progress. Each item below gets its own plan in `docs/plans/` befo
   - Spotify for Creators (accepts an RSS link).
   - Podcast Index.
   - Ready: 1 and 2 are done.
+  - **Postponed (2026-10-16).** Apple's sign-up form rejected `podcast@sibarit.org` as an Apple ID,
+    most likely because the domain was registered the day before. The Apple ID email doesn't have
+    to match the feed: use a Gmail address, or try the domain again later.
 
 ## Reliability
 
@@ -66,9 +69,14 @@ backfill is in progress. Each item below gets its own plan in `docs/plans/` befo
 - One feed per YouTube playlist (`feed-<name>.xml`) that reuses the same audio files, so no extra
   storage. Needs the playlist list from YouTube and each video's playlists in the state.
 
-### 8. Page for listeners at `sibarit.org`
+### 8. Page for listeners at `sibarit.org` (done)
 - "Open in Apple Podcasts / Pocket Casts / Overcast / …" buttons and the feed URL. Simpler than
-  a raw `feed.xml` link for non-technical listeners. The root domain is free for it.
+  a raw `feed.xml` link for non-technical listeners.
+- **Done (2026-10-16):** static `site/index.html`, deployed by Cloudflare Pages on pushes to
+  `master` that change `site/`; `www.sibarit.org` redirects to the root (a Redirect Rule).
+  - `podcast://` fills in the URL on iPhone, but Podcasts on macOS opens an empty "Follow a Show by
+    URL" box (`podcasts://`, `pcast://` and `itpc://` are no better), so the button also copies the
+    feed URL. Once the show is in Apple's catalog, link to its `podcasts.apple.com` page instead.
 
 ### 9. Richer episodes
 - Clickable links in episode descriptions.
