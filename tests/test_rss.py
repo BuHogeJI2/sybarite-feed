@@ -78,6 +78,18 @@ def test_description_is_escaped_html_with_video_link():
     )
 
 
+def test_description_separators_become_paragraph_breaks():
+    separator = "-" * 133
+    episode = make_episode(description=f"Цитата \n{separator}   \nСайт: https://a.example/   {separator}\nВК  \nFB")
+    item = parse(build_feed([episode], make_feed_config(), BASE_URL)).find("item")
+    assert item.findtext("description") == (
+        "<p>Цитата</p>"
+        "<p>Сайт: https://a.example/</p>"
+        "<p>ВК<br>FB</p>"
+        '<p><a href="https://www.youtube.com/watch?v=2NgIPVQbK8g">Видео на YouTube</a></p>'
+    )
+
+
 def test_items_are_newest_first():
     old = make_episode("old", published=datetime(2020, 1, 1, tzinfo=UTC))
     new = make_episode("new")

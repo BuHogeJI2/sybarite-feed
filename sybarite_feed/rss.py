@@ -1,4 +1,5 @@
 import html
+import re
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable
 from email.utils import format_datetime
@@ -10,6 +11,10 @@ from sybarite_feed.episode import Episode
 ITUNES = "http://www.itunes.com/dtds/podcast-1.0.dtd"
 ATOM = "http://www.w3.org/2005/Atom"
 COVER_KEY = "cover.jpg"
+# the author separates sections with lines of ~130 dashes, often at the end of a text line;
+# they took about a tenth of the feed
+SEPARATOR = re.compile(r"[ \t]*-{5,}[ \t]*")
+TRAILING_SPACES = re.compile(r"[ \t]+$", re.MULTILINE)
 
 ET.register_namespace("itunes", ITUNES)
 ET.register_namespace("atom", ATOM)
@@ -77,8 +82,12 @@ def channel_html(feed: FeedConfig) -> str:
 
 
 def episode_html(episode: Episode) -> str:
-    body = _paragraphs_html(episode.description)
+    body = _paragraphs_html(_tidy(episode.description))
     return f'{body}<p><a href="{html.escape(episode.video_url)}">Видео на YouTube</a></p>'
+
+
+def _tidy(description: str) -> str:
+    return TRAILING_SPACES.sub("", SEPARATOR.sub("\n\n", description))
 
 
 def _paragraphs_html(text: str) -> str:
