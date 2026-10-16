@@ -2,9 +2,9 @@ import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 
 from factories import make_episode, make_feed_config
-from sybarite_feed.rss import ATOM, ITUNES, build_feed
+from sybarite_feed.rss import ATOM, ITUNES, PODCAST, build_feed
 
-NS = {"itunes": ITUNES, "atom": ATOM}
+NS = {"itunes": ITUNES, "atom": ATOM, "podcast": PODCAST}
 BASE_URL = "https://feed.example.com/"
 
 
@@ -33,9 +33,10 @@ def test_owner_only_when_email_is_set():
     assert channel.findtext("itunes:owner/itunes:email", namespaces=NS) == "me@example.com"
 
 
-def test_channel_description_ends_with_donate_and_credit_links():
+def test_channel_description_ends_with_site_donate_and_credit_links():
     feed = make_feed_config(
         description="О канале.\n\nПочта & сайт",
+        site_url="https://author.example/",
         donate_url="https://www.paypal.com/donate?hosted_button_id=X&a=1",
         credit="BuHogeJI",
         credit_url="https://github.com/BuHogeJI2/sybarite-feed",
@@ -43,6 +44,7 @@ def test_channel_description_ends_with_donate_and_credit_links():
     assert parse(build_feed([], feed, BASE_URL)).findtext("description") == (
         "<p>О канале.</p>"
         "<p>Почта &amp; сайт</p>"
+        '<p>Сайт: <a href="https://author.example/">https://author.example/</a></p>'
         "<p>Поддержать канал через PayPal: "
         '<a href="https://www.paypal.com/donate?hosted_button_id=X&amp;a=1">'
         "https://www.paypal.com/donate?hosted_button_id=X&amp;a=1</a></p>"
@@ -52,6 +54,14 @@ def test_channel_description_ends_with_donate_and_credit_links():
 
 def test_channel_description_without_links():
     assert parse(build_feed([], make_feed_config(), BASE_URL)).findtext("description") == "<p>Лекции</p>"
+
+
+def test_funding_only_when_donate_url_is_set():
+    assert parse(build_feed([], make_feed_config(), BASE_URL)).find("podcast:funding", NS) is None
+    feed = make_feed_config(donate_url="https://www.paypal.com/donate?hosted_button_id=X")
+    funding = parse(build_feed([], feed, BASE_URL)).find("podcast:funding", NS)
+    assert funding.get("url") == "https://www.paypal.com/donate?hosted_button_id=X"
+    assert funding.text == "Поддержать канал"
 
 
 def test_episode_item():

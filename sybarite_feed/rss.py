@@ -10,6 +10,7 @@ from sybarite_feed.episode import Episode
 
 ITUNES = "http://www.itunes.com/dtds/podcast-1.0.dtd"
 ATOM = "http://www.w3.org/2005/Atom"
+PODCAST = "https://podcastindex.org/namespace/1.0"
 COVER_KEY = "cover.jpg"
 # the author separates sections with lines of ~130 dashes, often at the end of a text line;
 # they took about a tenth of the feed
@@ -18,6 +19,7 @@ TRAILING_SPACES = re.compile(r"[ \t]+$", re.MULTILINE)
 
 ET.register_namespace("itunes", ITUNES)
 ET.register_namespace("atom", ATOM)
+ET.register_namespace("podcast", PODCAST)
 
 
 def build_feed(episodes: Iterable[Episode], feed: FeedConfig, base_url: str) -> bytes:
@@ -46,6 +48,8 @@ def build_feed(episodes: Iterable[Episode], feed: FeedConfig, base_url: str) -> 
         owner = _sub(channel, _itunes("owner"))
         _sub(owner, _itunes("name"), feed.owner_name or feed.author)
         _sub(owner, _itunes("email"), feed.owner_email)
+    if feed.donate_url:
+        _sub(channel, f"{{{PODCAST}}}funding", "Поддержать канал", url=feed.donate_url)
 
     for episode in sorted(episodes, key=lambda episode: episode.published, reverse=True):
         item = _sub(channel, "item")
@@ -69,6 +73,9 @@ def build_feed(episodes: Iterable[Episode], feed: FeedConfig, base_url: str) -> 
 
 def channel_html(feed: FeedConfig) -> str:
     body = _paragraphs_html(feed.description)
+    if feed.site_url:
+        site_url = html.escape(feed.site_url)
+        body += f'<p>Сайт: <a href="{site_url}">{site_url}</a></p>'
     if feed.donate_url:
         donate_url = html.escape(feed.donate_url)
         # Apple Podcasts drops <a> tags in the show description and links only bare URLs

@@ -17,6 +17,7 @@ description = """
 
 Мой электронный адрес: genavaldberg@gmail.com
 Facebook: https://www.facebook.com/frenkuoldberg"""
+site_url = "https://genadivaldberg.wordpress.com/"
 donate_url = "https://www.paypal.com/donate?hosted_button_id=QWPFEY2BG92S6"
 credit = "BuHogeJI"
 credit_url = "https://github.com/BuHogeJI2/sybarite-feed"
@@ -26,9 +27,9 @@ category = "Society & Culture"
 subcategory = "Philosophy"
 # square, 1400-3000 px; the channel avatar
 cover = "cover.jpg"
-# itunes:owner is needed only when submitting to Apple/Spotify; left empty until the author agrees
-owner_name = ""
-owner_email = ""
+# public in the feed; Apple and Spotify send ownership checks here. Forwarded by Cloudflare Email Routing
+owner_name = "Геннадий Вальдберг"
+owner_email = "podcast@sibarit.org"
 
 [storage]
 # public URL of the R2 bucket. Subscribers store the feed URL built from it, so changing it loses them

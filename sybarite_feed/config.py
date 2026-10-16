@@ -23,6 +23,7 @@ class FeedConfig:
     subcategory: str = ""
     owner_name: str = ""
     owner_email: str = ""
+    site_url: str = ""
     donate_url: str = ""
     credit: str = ""
     credit_url: str = ""
