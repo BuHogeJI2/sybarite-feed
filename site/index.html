@@ -101,7 +101,7 @@
 
   <h2>Открыть в приложении</h2>
   <div class="apps">
-    <a href="podcast://podcast.sibarit.org/feed.xml">Apple Podcasts<small>iPhone, iPad, Mac</small></a>
+    <a id="apple" href="podcast://podcast.sibarit.org/feed.xml">Apple Podcasts<small>iPhone, iPad, Mac</small></a>
     <a href="overcast://x-callback-url/add?url=https%3A%2F%2Fpodcast.sibarit.org%2Ffeed.xml">Overcast<small>iPhone, iPad</small></a>
     <a href="pktc://subscribe/podcast.sibarit.org/feed.xml">Pocket Casts<small>iPhone, Android</small></a>
     <a href="https://antennapod.org/deeplink/subscribe?url=https%3A%2F%2Fpodcast.sibarit.org%2Ffeed.xml&amp;title=%D0%97%D0%B0%D0%BF%D0%B8%D1%81%D0%BA%D0%B8%20%D0%B2%D0%BE%D0%B8%D0%BD%D1%81%D1%82%D0%B2%D1%83%D1%8E%D1%89%D0%B5%D0%B3%D0%BE%20%D1%81%D0%B8%D0%B1%D0%B0%D1%80%D0%B8%D1%82%D0%B0">AntennaPod<small>Android</small></a>
@@ -135,15 +135,26 @@
   </footer>
 </main>
 <script>
-  document.getElementById("copy").addEventListener("click", async (event) => {
-    const input = document.getElementById("feed-url");
+  const input = document.getElementById("feed-url");
+
+  async function copyFeedUrl() {
     try {
       await navigator.clipboard.writeText(input.value);
     } catch {
       input.select();
       document.execCommand("copy");
     }
+  }
+
+  document.getElementById("copy").addEventListener("click", async (event) => {
+    await copyFeedUrl();
     event.target.textContent = "Скопировано";
+  });
+
+  // Podcasts on macOS opens the "Follow a Show by URL" box but leaves it empty; iPhone fills it in
+  document.getElementById("apple").addEventListener("click", (event) => {
+    copyFeedUrl();
+    event.currentTarget.querySelector("small").textContent = "Ссылка скопирована. Если поле пустое, вставьте её (⌘V)";
   });
 </script>
 </body>
