@@ -24,12 +24,17 @@ backfill is in progress. Each item below gets its own plan in `docs/plans/` befo
     `<link>` stays the YouTube channel.
   - `podcast:funding` with the PayPal link; apps that support it show a "Support" button.
 
-### 3. Remove an episode
+### 3. Remove an episode (done)
 - **Why:** the author may ask to remove a lecture; that should take a minute.
-- **Notes:** a `remove --id` command: delete the audio from R2, drop the episode from the state
-  and the feed, and add the video to a blocklist so later runs don't download it again. Also
-  settles review finding #10 (videos deleted or edited on YouTube): keep them unless removed by
-  hand.
+- **Done (2026-10-19):** `remove --id` and a `remove` workflow (run by hand, in the daily job's
+  concurrency group, so it works from a phone and never overlaps a daily run).
+  - Order: save the state (ETag check), publish the feed, then delete the audio, so a failed step
+    never leaves the feed pointing at a missing file.
+  - The blocklist is `removed` in `state.json` (video ID → date), not `config.toml`: it is saved in
+    the same write as the episode removal and needs no commit.
+  - No undo command; delete the ID from `removed` by hand.
+  - Settles review finding #10: episodes whose videos are deleted or edited on YouTube stay until
+    removed by hand.
 
 ### 4. Submit to catalogs
 - **Why:** listeners should find the podcast by search, not only by link.
