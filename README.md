@@ -45,6 +45,21 @@ The daily workflow always takes the newest yt-dlp, while the laptop uses the ver
 If downloads fail on the laptop, upgrade it with
 `uv lock --upgrade-package yt-dlp --upgrade-package yt-dlp-ejs`.
 
+## Remove an episode
+
+Episodes stay in the feed even if the video is deleted or changed on YouTube. To remove one, run the
+**remove** workflow on GitHub (Actions → remove → Run workflow) with the video ID, or several IDs
+separated by spaces. From the laptop:
+
+```sh
+uv run --env-file .env python -m sybarite_feed remove --id VIDEO_ID
+```
+
+The episode leaves the feed, its audio is deleted from R2, and the ID goes into `removed` in
+`state.json`, so later runs never download it again. This also works for a video that isn't in the
+feed yet. Apps that already downloaded the episode keep their copy. To undo, delete the ID from
+`removed` in `state.json`; the next run downloads the video again.
+
 ## Refresh cookies
 
 GitHub runners can download from YouTube only with the cookies of a logged-in account, stored in

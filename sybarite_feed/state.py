@@ -9,6 +9,8 @@ from sybarite_feed.episode import Episode
 class State:
     episodes: dict[str, Episode] = field(default_factory=dict)
     failures: dict[str, int] = field(default_factory=dict)
+    # video ID -> date it was removed by hand; these videos are never downloaded again
+    removed: dict[str, str] = field(default_factory=dict)
 
 
 def state_to_json(state: State) -> str:
@@ -16,6 +18,7 @@ def state_to_json(state: State) -> str:
     data = {
         "episodes": [{**asdict(episode), "published": episode.published.isoformat()} for episode in episodes],
         "failures": state.failures,
+        "removed": state.removed,
     }
     return json.dumps(data, ensure_ascii=False, indent=2)
 
@@ -23,4 +26,8 @@ def state_to_json(state: State) -> str:
 def state_from_json(text: str) -> State:
     data = json.loads(text)
     episodes = [Episode(**{**raw, "published": datetime.fromisoformat(raw["published"])}) for raw in data["episodes"]]
-    return State(episodes={episode.id: episode for episode in episodes}, failures=data["failures"])
+    return State(
+        episodes={episode.id: episode for episode in episodes},
+        failures=data["failures"],
+        removed=data.get("removed", {}),
+    )

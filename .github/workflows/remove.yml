@@ -1,0 +1,36 @@
+name: remove
+
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: YouTube video IDs to remove, separated by spaces
+        required: true
+
+permissions:
+  contents: read
+
+# the same group as the daily workflow, so the two never write the feed at the same time
+concurrency:
+  group: feed
+  cancel-in-progress: false
+
+jobs:
+  remove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: remove
+        run: |
+          read -ra ids <<< "$IDS"
+          args=()
+          for id in "${ids[@]}"; do args+=(--id "$id"); done
+          uv run --locked --no-dev python -m sybarite_feed remove "${args[@]}"
+        env:
+          IDS: ${{ inputs.ids }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}

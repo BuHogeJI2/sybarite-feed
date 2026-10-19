@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from dataclasses import asdict
+from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from sybarite_feed.channel import list_videos
 from sybarite_feed.config import load_config
 from sybarite_feed.cookies import InvalidCookieFile, cookie_values, mask_commands
 from sybarite_feed.download import download_audio
+from sybarite_feed.remove import VIDEO_ID, remove_videos
 from sybarite_feed.run import run_update
 from sybarite_feed.storage import ConflictError, R2Storage
 
@@ -24,6 +26,11 @@ def main() -> None:
     run = commands.add_parser("run", help="download new videos, upload them and publish the feed")
     run.add_argument("--limit", type=int, help="max videos to download (default: channel.batch_size)")
     run.add_argument("--work-dir", type=Path, default=Path("tmp"), help="directory for downloads in progress")
+    remove = commands.add_parser("remove", help="remove videos from the feed and never download them again")
+    remove.add_argument(
+        "--id", dest="ids", action="append", required=True, type=_video_id, metavar="ID",
+        help="YouTube video ID; repeat for several",
+    )
     check = commands.add_parser("check-cookies", help="check a cookies.txt file without printing its content")
     check.add_argument("path", type=Path)
     check.add_argument("--mask", action="store_true", help="print GitHub Actions commands that hide the values")
@@ -63,6 +70,19 @@ def main() -> None:
             sys.exit(1)
         logging.info("done: %d added, %d failed", len(result.added), len(result.failed))
         sys.exit(0 if result.ok else 1)
+    elif args.command == "remove":
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+        try:
+            remove_videos(R2Storage.from_env(), config, args.ids, datetime.now(UTC).date())
+        except ConflictError:
+            logging.error("state.json was changed by another run; nothing was removed, try again")
+            sys.exit(1)
+
+
+def _video_id(text: str) -> str:
+    if not VIDEO_ID.fullmatch(text):
+        raise argparse.ArgumentTypeError(f"not a YouTube video ID: {text!r}")
+    return text
 
 
 def _checked_cookie_values(path: str | Path) -> list[str]:

@@ -6,8 +6,12 @@ from sybarite_feed.state import State, state_from_json, state_to_json
 
 
 def test_round_trip():
-    state = State(episodes={"a": make_episode("a")}, failures={"b": 2})
+    state = State(episodes={"a": make_episode("a")}, failures={"b": 2}, removed={"c": "2026-10-19"})
     assert state_from_json(state_to_json(state)) == state
+
+
+def test_state_saved_before_removals_existed_loads():
+    assert state_from_json('{"episodes": [], "failures": {}}') == State()
 
 
 def test_episodes_are_saved_newest_first():

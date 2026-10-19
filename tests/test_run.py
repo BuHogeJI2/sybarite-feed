@@ -106,6 +106,14 @@ def test_second_run_skips_done_videos(storage, work_dir):
     assert result.added == ["b"]
 
 
+def test_removed_videos_are_not_downloaded(storage, work_dir):
+    storage.put(STATE_KEY, state_to_json(State(removed={"a": "2026-10-19"})).encode(), "application/json")
+    downloader = FakeDownloader(work_dir)
+    run(storage, downloader, "a", "b")
+    assert downloader.calls == ["b"]
+    assert saved_state(storage).removed == {"a": "2026-10-19"}
+
+
 def test_limit_zero_only_republishes_feed(storage, work_dir):
     run(storage, FakeDownloader(work_dir), "a")
     state_before = storage.get(STATE_KEY)

@@ -36,6 +36,8 @@ class Storage(Protocol):
 
     def upload_file(self, key: str, path: Path, content_type: str, *, cache_control: str | None = None) -> None: ...
 
+    def delete(self, key: str) -> None: ...
+
 
 class LocalStorage:
     def __init__(self, root: Path):
@@ -72,6 +74,9 @@ class LocalStorage:
         target = self.root / key
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
+
+    def delete(self, key: str) -> None:
+        (self.root / key).unlink(missing_ok=True)
 
 
 class R2Storage:
@@ -134,6 +139,9 @@ class R2Storage:
         if cache_control:
             extra["CacheControl"] = cache_control
         self.client.upload_file(str(path), self.bucket, key, ExtraArgs=extra)
+
+    def delete(self, key: str) -> None:
+        self.client.delete_object(Bucket=self.bucket, Key=key)
 
 
 def _etag(data: bytes) -> str:

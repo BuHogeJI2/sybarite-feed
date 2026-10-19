@@ -9,6 +9,7 @@ from pathlib import Path
 from sybarite_feed.channel import ChannelVideo
 from sybarite_feed.config import Config
 from sybarite_feed.download import DownloadedAudio
+from sybarite_feed.episode import Episode
 from sybarite_feed.rss import COVER_KEY, build_feed
 from sybarite_feed.select import MAX_ATTEMPTS, select_batch
 from sybarite_feed.state import State, state_from_json, state_to_json
@@ -40,13 +41,12 @@ def run_update(
     download: Callable[[str], DownloadedAudio],
     pause: Callable[[], None] = random_pause,
 ) -> RunResult:
-    stored = storage.get(STATE_KEY)
-    state = state_from_json(stored.data.decode()) if stored else State()
-    etag = stored.etag if stored else None
+    state, etag = load_state(storage)
     storage.upload_file(COVER_KEY, Path(config.feed.cover), "image/jpeg", cache_control="public, max-age=86400")
 
     videos = list_videos(config.channel.url)
-    batch = select_batch(videos, state.episodes.keys(), state.failures, config.channel.min_duration, limit)
+    done = state.episodes.keys() | state.removed.keys()
+    batch = select_batch(videos, done, state.failures, config.channel.min_duration, limit)
     log.info("channel has %d videos, %d in the feed, %d selected", len(videos), len(state.episodes), len(batch))
 
     result = RunResult()
@@ -62,18 +62,18 @@ def run_update(
             result.failed.append(video.id)
             if not _youtube_works(state, download, pause):
                 log.error("stopping: published episodes don't download either, so YouTube access is broken")
-                _publish_feed(storage, state, config)
+                publish_feed(storage, state, config)
                 result.ok = False
                 return result
             attempts = state.failures.get(video.id, 0) + 1
             state.failures[video.id] = attempts
             if attempts >= MAX_ATTEMPTS:
                 log.error("giving up on %s after %d failed attempts", video.id, attempts)
-            etag = _save_state(storage, state, etag)
+            etag = save_state(storage, state, etag)
             continue
 
         storage.upload_file(
-            f"audio/{audio.episode.file_name}",
+            audio_key(audio.episode),
             audio.path,
             audio.episode.mime_type,
             cache_control="public, max-age=31536000, immutable",
@@ -81,14 +81,14 @@ def run_update(
         audio.path.unlink()
         state.episodes[video.id] = audio.episode
         state.failures.pop(video.id, None)
-        etag = _save_state(storage, state, etag)
-        _publish_feed(storage, state, config)
+        etag = save_state(storage, state, etag)
+        publish_feed(storage, state, config)
         result.added.append(video.id)
         log.info("added %s: %s", video.id, audio.episode.title)
 
     if not result.added:
         # keeps the feed current after a config change or a run that stopped before publishing
-        _publish_feed(storage, state, config)
+        publish_feed(storage, state, config)
     return result
 
 
@@ -111,7 +111,18 @@ def _youtube_works(state: State, download: Callable[[str], DownloadedAudio], pau
     return False
 
 
-def _save_state(storage: Storage, state: State, etag: str | None) -> str:
+def audio_key(episode: Episode) -> str:
+    return f"audio/{episode.file_name}"
+
+
+def load_state(storage: Storage) -> tuple[State, str | None]:
+    stored = storage.get(STATE_KEY)
+    if not stored:
+        return State(), None
+    return state_from_json(stored.data.decode()), stored.etag
+
+
+def save_state(storage: Storage, state: State, etag: str | None) -> str:
     return storage.put(
         STATE_KEY,
         state_to_json(state).encode(),
@@ -122,7 +133,7 @@ def _save_state(storage: Storage, state: State, etag: str | None) -> str:
     )
 
 
-def _publish_feed(storage: Storage, state: State, config: Config) -> None:
+def publish_feed(storage: Storage, state: State, config: Config) -> None:
     feed = build_feed(state.episodes.values(), config.feed, config.storage.base_url)
     # a feed that doesn't parse would replace the working one in every subscriber's app
     ET.fromstring(feed)

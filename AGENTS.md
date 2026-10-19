@@ -6,6 +6,7 @@ for how it works and `docs/roadmap.md` for what is planned.
 ## Layout
 - `sybarite_feed/`: the Python package (Python 3.12, uv).
   - `run.py`: the daily update: list videos, download, upload to R2, save state, publish the feed.
+  - `remove.py`: removes episodes by hand and blocks them from later runs.
   - `rss.py`: builds `feed.xml`. `channel.py`, `download.py`, `metadata.py`: YouTube via yt-dlp.
   - `storage.py`: Cloudflare R2. `state.py`: `state.json`, the list of published episodes.
   - `cookies.py`: checks and masks the YouTube cookies used on GitHub Actions.
@@ -19,6 +20,7 @@ for how it works and `docs/roadmap.md` for what is planned.
 uv run pytest
 uv run --env-file .env python -m sybarite_feed run --limit 10   # real run: needs .env with R2 keys
 uv run --env-file .env python -m sybarite_feed run --limit 0    # rebuild and upload feed.xml only
+uv run --env-file .env python -m sybarite_feed remove --id VIDEO_ID
 uv run python -m sybarite_feed download --id VIDEO_ID --out ./tmp
 ```
 
