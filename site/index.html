@@ -102,10 +102,10 @@
   <p class="muted">Нужно приложение для подкастов. На iPhone и Mac уже есть Apple&nbsp;Podcasts, на Android можно
     установить, например, AntennaPod или Pocket&nbsp;Casts.</p>
   <div class="apps">
-    <a id="apple" href="podcast://podcast.sibarit.org/feed.xml">Apple Podcasts<small>iPhone, iPad, Mac</small></a>
-    <a href="overcast://x-callback-url/add?url=https%3A%2F%2Fpodcast.sibarit.org%2Ffeed.xml">Overcast<small>iPhone, iPad</small></a>
-    <a href="pktc://subscribe/podcast.sibarit.org/feed.xml">Pocket Casts<small>iPhone, Android</small></a>
-    <a href="https://antennapod.org/deeplink/subscribe?url=https%3A%2F%2Fpodcast.sibarit.org%2Ffeed.xml&amp;title=%D0%97%D0%B0%D0%BF%D0%B8%D1%81%D0%BA%D0%B8%20%D0%B2%D0%BE%D0%B8%D0%BD%D1%81%D1%82%D0%B2%D1%83%D1%8E%D1%89%D0%B5%D0%B3%D0%BE%20%D1%81%D0%B8%D0%B1%D0%B0%D1%80%D0%B8%D1%82%D0%B0">AntennaPod<small>Android</small></a>
+    <a id="apple" data-click="apple" href="podcast://podcast.sibarit.org/feed.xml">Apple Podcasts<small>iPhone, iPad, Mac</small></a>
+    <a data-click="overcast" href="overcast://x-callback-url/add?url=https%3A%2F%2Fpodcast.sibarit.org%2Ffeed.xml">Overcast<small>iPhone, iPad</small></a>
+    <a data-click="pocketcasts" href="pktc://subscribe/podcast.sibarit.org/feed.xml">Pocket Casts<small>iPhone, Android</small></a>
+    <a data-click="antennapod" href="https://antennapod.org/deeplink/subscribe?url=https%3A%2F%2Fpodcast.sibarit.org%2Ffeed.xml&amp;title=%D0%97%D0%B0%D0%BF%D0%B8%D1%81%D0%BA%D0%B8%20%D0%B2%D0%BE%D0%B8%D0%BD%D1%81%D1%82%D0%B2%D1%83%D1%8E%D1%89%D0%B5%D0%B3%D0%BE%20%D1%81%D0%B8%D0%B1%D0%B0%D1%80%D0%B8%D1%82%D0%B0">AntennaPod<small>Android</small></a>
   </div>
 
   <h2>Другое приложение</h2>
@@ -113,7 +113,7 @@
     <p style="margin-top: 0">Скопируйте ссылку на подкаст и добавьте её в приложение:</p>
     <div class="feed">
       <input id="feed-url" type="text" value="https://podcast.sibarit.org/feed.xml" readonly aria-label="Ссылка на подкаст">
-      <button id="copy" type="button">Копировать</button>
+      <button id="copy" data-click="copy" type="button">Копировать</button>
     </div>
     <ul class="muted">
       <li><b>Apple Podcasts:</b> Медиатека → ⋯ → подписка по URL</li>
@@ -137,6 +137,16 @@
 </main>
 <script>
   const input = document.getElementById("feed-url");
+
+  // Counted in Cloudflare's HTTP analytics as a request to /click/<name>. keepalive lets the request
+  // finish while the browser leaves for the app; the timestamp keeps the browser cache from absorbing it.
+  function trackClick(name) {
+    fetch(`/click/${name}?t=${Date.now()}`, { keepalive: true }).catch(() => {});
+  }
+
+  document.querySelectorAll("[data-click]").forEach((element) => {
+    element.addEventListener("click", () => trackClick(element.dataset.click));
+  });
 
   async function copyFeedUrl() {
     try {
