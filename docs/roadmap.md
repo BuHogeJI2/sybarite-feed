@@ -91,3 +91,22 @@ backfill is in progress. Each item below gets its own plan in `docs/plans/` befo
 ### 10. Transcripts
 - `podcast:transcript` from YouTube subtitles. Apple shows them, and they make the lectures
   searchable by text. The largest item here.
+
+### 11. Listener stats (partly done)
+- **Why:** to know whether anyone listens, and which apps they use.
+- **Rule:** no third-party tools (OP3, Plausible, …); only what Cloudflare already gives.
+- **Done (2026-10-24):**
+  - `site/404.html`. Without it Pages answered every path with `index.html` and 200, so scanners
+    (`/.git/config`, `*.php`, about 500 requests from Sydney in an hour) looked like page views.
+  - App buttons and "Копировать" send `GET /click/<name>` (`apple`, `overcast`, `pocketcasts`,
+    `antennapod`, `copy`). There is no file there, so they get 404; Cloudflare's HTTP analytics
+    still counts them. Check: zone `sibarit.org` → Analytics → Requests, filter Host equals
+    `sibarit.org` and Path starts with `/click/`. The free plan keeps about 30 days, which is enough.
+- **Notes:**
+  - Web Analytics (the Visitors tab) seems to be on already: the page sends `/cdn-cgi/rum`.
+  - Feed and audio: filter Host equals `podcast.sibarit.org`. `feed.xml` requests are apps polling,
+    not people; audio requests are closer to listens, but with no per-listener deduplication.
+  - Don't turn on Bot Fight Mode: on the free plan it covers the whole zone and may challenge podcast
+    apps fetching the feed and audio.
+  - Real numbers per episode and app would need a Worker in front of `podcast.sibarit.org` that
+    logs requests; the catalogs (item 4) add their own stats.
