@@ -1,3 +1,4 @@
+import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from sybarite_feed.rss import COVER_KEY
 from sybarite_feed.run import FEED_KEY, STATE_KEY, run_update
 from sybarite_feed.select import MAX_ATTEMPTS
 from sybarite_feed.state import State, state_from_json, state_to_json
+from sybarite_feed.stats import STATS_KEY
 from sybarite_feed.storage import ConflictError, LocalStorage
 
 
@@ -92,7 +94,15 @@ def test_adds_new_videos_and_publishes_feed(storage, work_dir):
 
 def test_writes_cover_then_audio_state_and_feed(storage, work_dir):
     run(storage, FakeDownloader(work_dir), "a", "b")
-    assert storage.writes == [COVER_KEY, "audio/a.m4a", STATE_KEY, FEED_KEY, "audio/b.m4a", STATE_KEY, FEED_KEY]
+    assert storage.writes == [
+        COVER_KEY, "audio/a.m4a", STATE_KEY, FEED_KEY, "audio/b.m4a", STATE_KEY, FEED_KEY, STATS_KEY,
+    ]
+
+
+def test_publishes_stats(storage, work_dir):
+    run(storage, FakeDownloader(work_dir), "a", "b", "c", limit=2)
+    stats = json.loads(storage.get(STATS_KEY).data)
+    assert (stats["episodes"], stats["total"]) == (2, 3)
 
 
 def test_second_run_skips_done_videos(storage, work_dir):
@@ -122,7 +132,7 @@ def test_limit_zero_only_republishes_feed(storage, work_dir):
     result = run(storage, FakeDownloader(work_dir), "a", "b", limit=0)
 
     assert result.ok and result.added == []
-    assert storage.writes == [COVER_KEY, FEED_KEY]
+    assert storage.writes == [COVER_KEY, FEED_KEY, STATS_KEY]
     assert storage.get(STATE_KEY) == state_before
 
 
@@ -174,7 +184,7 @@ def test_stops_without_counting_when_a_published_episode_fails_too(storage, work
     assert not result.ok
     assert downloader.calls == ["a", "x"]
     assert saved_state(storage).failures == {}
-    assert storage.writes == [COVER_KEY, FEED_KEY]
+    assert storage.writes == [COVER_KEY, FEED_KEY, STATS_KEY]
 
 
 def test_tries_the_next_episode_when_the_shortest_was_removed(storage, work_dir):

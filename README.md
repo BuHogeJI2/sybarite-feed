@@ -79,6 +79,10 @@ with "Sign in to confirm you're not a bot" and GitHub sends an email. To renew t
 `site/` is a static page with no build step. Cloudflare Pages deploys it on every push to `master`
 that changes `site/`.
 
+The page shows the episode count, hours and latest episodes from `stats.json`, which the daily run
+writes next to `feed.xml`. The R2 bucket's CORS policy must allow `GET` from `https://sibarit.org`;
+without it the page hides that block.
+
 ## Development
 
 ```sh

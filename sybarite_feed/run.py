@@ -4,6 +4,7 @@ import time
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sybarite_feed.channel import ChannelVideo
@@ -13,6 +14,7 @@ from sybarite_feed.episode import Episode
 from sybarite_feed.rss import COVER_KEY, build_feed
 from sybarite_feed.select import MAX_ATTEMPTS, select_batch
 from sybarite_feed.state import State, state_from_json, state_to_json
+from sybarite_feed.stats import STATS_KEY, build_stats
 from sybarite_feed.storage import Storage
 
 STATE_KEY = "state.json"
@@ -63,6 +65,7 @@ def run_update(
             if not _youtube_works(state, download, pause):
                 log.error("stopping: published episodes don't download either, so YouTube access is broken")
                 publish_feed(storage, state, config)
+                publish_stats(storage, state, videos, config)
                 result.ok = False
                 return result
             attempts = state.failures.get(video.id, 0) + 1
@@ -89,6 +92,7 @@ def run_update(
     if not result.added:
         # keeps the feed current after a config change or a run that stopped before publishing
         publish_feed(storage, state, config)
+    publish_stats(storage, state, videos, config)
     return result
 
 
@@ -138,3 +142,8 @@ def publish_feed(storage: Storage, state: State, config: Config) -> None:
     # a feed that doesn't parse would replace the working one in every subscriber's app
     ET.fromstring(feed)
     storage.put(FEED_KEY, feed, "application/rss+xml; charset=utf-8", cache_control="public, max-age=300")
+
+
+def publish_stats(storage: Storage, state: State, videos: list[ChannelVideo], config: Config) -> None:
+    stats = build_stats(state, videos, config.channel.min_duration, datetime.now(UTC).replace(microsecond=0))
+    storage.put(STATS_KEY, stats, "application/json; charset=utf-8", cache_control="public, max-age=300")
